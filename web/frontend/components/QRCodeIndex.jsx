@@ -1,12 +1,11 @@
 import { useNavigate } from "@shopify/app-bridge-react";
 import {
   Card,
-  Icon,
   IndexTable,
   Stack,
   TextStyle,
-  Thumbnail,
   UnstyledLink,
+  useIndexResourceState,
 } from "@shopify/polaris";
 import { DiamondAlertMajor, ImageMajor } from "@shopify/polaris-icons";
 
@@ -19,12 +18,15 @@ import dayjs from "dayjs";
 /* Markup for small screen sizes (mobile) */
 function SmallScreenCard({
   id,
-  title,
-  product,
-  discountCode,
-  scans,
-  createdAt,
-  navigate,
+  name,
+  date,
+  customer,
+  total,
+  payment_status,
+  fullfillment_status,
+  items,
+  delivery_method,
+  tags
 }) {
   return (
     <UnstyledLink onClick={() => navigate(`/qrcodes/${id}`)}>
@@ -32,20 +34,20 @@ function SmallScreenCard({
         style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E1E3E5" }}
       >
         <Stack>
-          <Stack.Item>
+          {/* <Stack.Item>
             <Thumbnail
               source={product?.images?.edges[0]?.node?.url || ImageMajor}
               alt="placeholder"
               color="base"
               size="small"
             />
-          </Stack.Item>
+          </Stack.Item> */}
           <Stack.Item fill>
             <Stack vertical={true}>
               <Stack.Item>
                 <p>
                   <TextStyle variation="strong">
-                    {truncate(title, 35)}
+                    {truncate(name, 35)}
                   </TextStyle>
                 </p>
                 <p>{truncate(product?.title, 35)}</p>
@@ -85,48 +87,57 @@ export function QRCodeIndex({ QRCodes, loading }) {
     plural: "QR codes",
   };
 
+  const {selectedResources, allResourcesSelected, handleSelectionChange} = useIndexResourceState(QRCodes);
+  console.log(selectedResources);
+
   const rowMarkup = QRCodes.map(
-    ({ id, title, product, discountCode, scans, createdAt }, index) => {
-      const deletedProduct = product.title.includes("Deleted product");
+    ({ id, name, createdAt, total_price, total_weight, fulfillment_status, shiping_lines, tags }, index) => {
 
       /* The form layout, created using Polaris components. Includes the QR code data set above. */
       return (
         <IndexTable.Row
           id={id}
           key={id}
+          selected={selectedResources.includes(id)}
           position={index}
-          onClick={() => {
-            navigate(`/qrcodes/${id}`);
-          }}
+          // onClick={() => {
+          //   navigate(`/qrcodes/${id}`);
+          // }}
         >
           <IndexTable.Cell>
-            <Thumbnail
-              source={product?.images?.edges[0]?.node?.url || ImageMajor}
-              alt="placeholder"
-              color="base"
-              size="small"
-            />
-          </IndexTable.Cell>
-          <IndexTable.Cell>
             <UnstyledLink data-primary-link url={`/qrcodes/${id}`}>
-              {truncate(title, 25)}
+              {truncate(name, 25)}
             </UnstyledLink>
           </IndexTable.Cell>
           <IndexTable.Cell>
-            <Stack>
-              {deletedProduct && (
-                <Icon source={DiamondAlertMajor} color="critical" />
-              )}
-              <TextStyle variation={deletedProduct ? "negative" : null}>
-                {truncate(product?.title, 25)}
-              </TextStyle>
-            </Stack>
+            {dayjs(createdAt).format("dddd") + " at " + dayjs(createdAt).format("h:mm a")}
           </IndexTable.Cell>
-          <IndexTable.Cell>{discountCode}</IndexTable.Cell>
           <IndexTable.Cell>
-            {dayjs(createdAt).format("MMMM D, YYYY")}
+            {fulfillment_status == null ? 
+              <div style={{ display: 'inline', backgroundColor: "#c8e3ca", fontSize: 13, textAlign: 'center', borderRadius: 3, paddingTop: 5, paddingLeft: 10, paddingRight: 10, paddingBottom: 5, color: '#5f8147' }}>
+                processing
+              </div> : <div style={{ display: 'inline', backgroundColor: "#eee", fontSize: 13, textAlign: 'center', borderRadius: 3, paddingTop: 5, paddingLeft: 10, paddingRight: 10, paddingBottom: 5, color: '#b7b7b7' }}>
+                complete
+              </div>}
           </IndexTable.Cell>
-          <IndexTable.Cell>{scans}</IndexTable.Cell>
+          <IndexTable.Cell>
+            {"$"}{total_price}
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            {'54103029'}
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            {total_weight}
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            {}
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            {shiping_lines}
+          </IndexTable.Cell>
+          <IndexTable.Cell>
+            {tags}
+          </IndexTable.Cell>
         </IndexTable.Row>
       );
     }
@@ -138,22 +149,28 @@ export function QRCodeIndex({ QRCodes, loading }) {
       {isSmallScreen ? (
         smallScreenMarkup
       ) : (
-        <IndexTable
-          resourceName={resourceName}
-          itemCount={QRCodes.length}
-          headings={[
-            { title: "Thumbnail", hidden: true },
-            { title: "Title" },
-            { title: "Product" },
-            { title: "Discount" },
-            { title: "Date created" },
-            { title: "Scans" },
-          ]}
-          selectable={false}
-          loading={loading}
-        >
-          {rowMarkup}
-        </IndexTable>
+          <IndexTable
+            resourceName={resourceName}
+            itemCount={QRCodes.length}
+            selectedItemsCount={
+              allResourcesSelected ? 'All' : selectedResources.length
+            }
+            onSelectionChange={handleSelectionChange}
+            headings={[
+              { title: "Order"},
+              { title: "Date" },
+              { title: "Status" },
+              { title: "Total" },
+              { title: "shipping number" },
+              { title: "Weight" },
+              { title: "Affiliate Referral" },
+              { title: "Delivery method" },
+              { title: "Tags" },
+            ]}
+            loading={loading}
+          >
+            {rowMarkup}
+          </IndexTable>
       )}
     </Card>
   );
